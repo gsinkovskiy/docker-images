@@ -80,6 +80,9 @@ if [ -n "$COMPOSER_AUTH" ]; then
 	echo "$COMPOSER_AUTH" | tee $HOME/.composer/auth.json > /dev/null
 fi
 
+HOSTNAME=$(hostname)
+#sudo certbot --apache
+
 #sudo chown $USER:$USER -R $HOME/.config/composer/
 #sudo chown $USER:$USER -R /var/www/html/
 

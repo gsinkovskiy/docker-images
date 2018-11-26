@@ -1,0 +1,31 @@
+version: '3'
+services:
+    php-72:
+        #image: php:5.6-apache
+        build:
+            context: php-7.2
+        container_name: php-72
+        hostname: php-72.test
+        networks:
+            - default
+            - global_default
+            - php-72_default
+        volumes:
+            - "/etc/timezone:/etc/timezone:ro"
+            - "/etc/localtime:/etc/localtime:ro"
+            - "composer-cache-volume:/home/dev/.composer/cache"
+            - "./html:/var/www/html"
+        environment:
+            PASSWORD: 112233
+            EXPOSE_HOSTS: |-
+                php-72.test
+
+volumes:
+    composer-cache-volume:
+        external: true
+
+networks:
+    global_default:
+        external: true
+    php-72_default:
+        external: true

@@ -1,22 +1,18 @@
 FROM phusion/baseimage
 
-LABEL maintainer="Konstantin Myakshin <kod-dp@yandex.ru>"
+LABEL maintainer="Hlib Synkovskyi <gleb@itworks-soft.com>"
 
 RUN rm -f /etc/service/sshd/down
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install VCSs
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-  bzr \
-  cvs \
   git \
-  mercurial \
   subversion \
   && rm -rf /var/lib/apt/lists/* && rm -rf /var/cache/apk/* && rm -rf /tmp/*
 
 # Install common software
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    redis-tools \
     mysql-client \
     postgresql-client \
     curl \
@@ -42,11 +38,17 @@ RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
 ENV PHP_VERSION 7.2
 ENV PHP_INI_DIR /etc/php/$PHP_VERSION
 
+RUN add-apt-repository ppa:certbot/certbot \
+ && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    python-certbot-apache \
+ && rm -rf /var/lib/apt/lists/* && rm -rf /var/cache/apk/* && rm -rf /tmp/*
+
 # Install PHP and extensions
 RUN add-apt-repository ppa:ondrej/php \
  && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     apache2 \
     apache2-utils \
+    ssl-cert \
     libapache2-mod-php$PHP_VERSION \
     php$PHP_VERSION \
     php$PHP_VERSION-cli \
@@ -71,7 +73,28 @@ RUN add-apt-repository ppa:ondrej/php \
     php$PHP_VERSION-mailparse \
     php-xdebug \
  && a2enmod ssl rewrite headers include proxy alias \
+ && a2ensite default-ssl \
  && rm -rf /var/lib/apt/lists/* && rm -rf /var/cache/apk/* && rm -rf /tmp/*
+
+# Oracle-client
+RUN apt-get update \
+ && apt-get -y install unzip php7.2-dev php-pear build-essential libaio1 \
+ && rm -rf /var/lib/apt/lists/* && rm -rf /var/cache/apk/* && rm -rf /tmp/*
+RUN mkdir /opt/oracle
+RUN cd /opt/oracle && wget -c https://bitbucket.org/msyniukitworks/download/downloads/instantclient-sdk-linux.x64-12.1.0.2.0.zip && \
+ unzip instantclient-sdk-linux.x64-12.1.0.2.0.zip && \
+ wget -c https://bitbucket.org/msyniukitworks/download/downloads/instantclient-basic-linux.x64-12.1.0.2.0.zip && \
+ unzip instantclient-basic-linux.x64-12.1.0.2.0.zip && \
+ wget -c https://bitbucket.org/msyniukitworks/download/downloads/instantclient-jdbc-linux.x64-12.1.0.2.0.zip && \
+ unzip instantclient-jdbc-linux.x64-12.1.0.2.0.zip &&\
+ ln -s /opt/oracle/instantclient_12_1/libclntsh.so.12.1 /opt/oracle/instantclient_12_1/libclntsh.so && \
+ ln -s /opt/oracle/instantclient_12_1/libocci.so.12.1 /opt/oracle/instantclient_12_1/libocci.so && \
+ echo /opt/oracle/instantclient_12_1 > /etc/ld.so.conf.d/oracle-instantclient
+RUN ldconfig
+RUN sudo sh -c "echo 'instantclient,/opt/oracle/instantclient_12_1' | pecl install oci8"
+RUN echo "extension = oci8.so" >> /etc/php/7.2/mods-available/oci.ini
+RUN phpenmod oci
+RUN php -m | grep 'oci8'
 
 # Install Blackfire
 RUN version=$(php -r "echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;") \
@@ -89,7 +112,7 @@ RUN curl -sL https://squizlabs.github.io/PHP_CodeSniffer/phpcs.phar -o /usr/loca
 RUN curl -sL https://squizlabs.github.io/PHP_CodeSniffer/phpcbf.phar -o /usr/local/bin/phpcbf && chmod +x /usr/local/bin/phpcbf
 
 # Install Composer
-ENV COMPOSER_VERSION 1.5.2
+ENV COMPOSER_VERSION 1.7.3
 RUN curl -sL https://getcomposer.org/download/$COMPOSER_VERSION/composer.phar -o /usr/local/bin/composer && chmod +x /usr/local/bin/composer
 
 # Install PHPUnit
@@ -117,10 +140,6 @@ RUN mkdir -p /var/www/html && chown $CONTAINER_USER:$CONTAINER_GROUP -R /var/www
 
 #USER $CONTAINER_USER
 
-# Install Bower
-RUN npm install -g bower
-#RUN yarn global add bower
-
 ENV PASSWORD ""
 ENV COMPOSER_AUTH ""
 
@@ -137,7 +156,7 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/run-apache.sh
 VOLUME ["/var/www", "/var/log/apache2"]
 WORKDIR /var/www/html
 
-EXPOSE 80
+EXPOSE 80 443
 
 ENTRYPOINT ["/sbin/my_init", "--", "setuser", "dev", "/usr/local/bin/docker-entrypoint.sh"]
 CMD ["run-apache.sh"]

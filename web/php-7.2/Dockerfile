@@ -2,7 +2,7 @@ FROM phusion/baseimage
 
 LABEL maintainer="Hlib Synkovskyi <gleb@itworks-soft.com>"
 
-RUN rm -f /etc/service/sshd/down
+#RUN rm -f /etc/service/sshd/down
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install VCSs
@@ -119,8 +119,8 @@ RUN curl -sL https://getcomposer.org/download/$COMPOSER_VERSION/composer.phar -o
 ENV PHPUNIT_VERSION 6.4
 RUN curl -sL https://phar.phpunit.de/phpunit-$PHPUNIT_VERSION.phar -o /usr/local/bin/phpunit && chmod +x /usr/local/bin/phpunit
 
-COPY etc/my_init.d/01_start_sshd.sh /etc/my_init.d/01_start_sshd.sh
-RUN chmod +x /etc/my_init.d/01_start_sshd.sh
+#COPY etc/my_init.d/01_start_sshd.sh /etc/my_init.d/01_start_sshd.sh
+#RUN chmod +x /etc/my_init.d/01_start_sshd.sh
 
 ENV CONTAINER_USER dev
 ENV CONTAINER_GROUP $CONTAINER_USER
